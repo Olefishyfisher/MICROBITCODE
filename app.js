@@ -2,23 +2,26 @@ let tempSpan = document.getElementById("temp");
 let heaterSpan = document.getElementById("heater");
 let fanSpan = document.getElementById("fan");
 let statusSpan = document.getElementById("status");
+
 let port;
 let writer, reader;
 
 document.getElementById("connect").addEventListener("click", async () => {
     try {
+        // Request a serial port
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 115200 });
 
+        // Set up streams
         const textDecoder = new TextDecoderStream();
-        const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+        port.readable.pipeTo(textDecoder.writable);
         reader = textDecoder.readable.getReader();
 
         const textEncoder = new TextEncoderStream();
-        const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+        textEncoder.readable.pipeTo(port.writable);
         writer = textEncoder.writable.getWriter();
 
-        // Show admin controls
+        // Show hidden admin panel
         document.getElementById("admin").style.display = "block";
 
         // Read loop
@@ -35,7 +38,7 @@ document.getElementById("connect").addEventListener("click", async () => {
             }
         }
 
-    } catch(err) {
+    } catch (err) {
         console.error(err);
     }
 });
