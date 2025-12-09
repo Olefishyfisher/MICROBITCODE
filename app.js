@@ -1,47 +1,28 @@
-const connectBtn = document.getElementById("connectBtn");
-const tempEl = document.getElementById("temp");
-const heaterEl = document.getElementById("heater");
-const fanEl = document.getElementById("fan");
-const sampleEl = document.getElementById("sample");
+let tempSpan = document.getElementById("temp");
+let heaterSpan = document.getElementById("heater");
+let fanSpan = document.getElementById("fan");
 
-let port;
-let reader;
-
-connectBtn.addEventListener("click", async () => {
+document.getElementById("connect").addEventListener("click", async () => {
     try {
-        // Request the user to select a serial port (micro:bit)
-        port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 115200 });
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ namePrefix: "BBC micro:bit" }],
+            optionalServices: [0xFFE0]
+        });
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(0xFFE0);
+        const characteristic = await service.getCharacteristic(0xFFE1);
 
-        connectBtn.disabled = true;
-        connectBtn.textContent = "Connected";
-        readLoop();
-    } catch (err) {
-        console.error("Error connecting to micro:bit:", err);
-        alert("Failed to connect to micro:bit. Make sure it's plugged in.");
+        await characteristic.startNotifications();
+        characteristic.addEventListener("characteristicvaluechanged", e => {
+            const value = new TextDecoder().decode(e.target.value);
+            const parts = value.trim().split(",");
+            if (parts.length >= 3) {
+                tempSpan.textContent = parts[0];
+                heaterSpan.textContent = parts[1];
+                fanSpan.textContent = parts[2];
+            }
+        });
+    } catch(err) {
+        console.error(err);
     }
 });
-
-async function readLoop() {
-    const textDecoder = new TextDecoderStream();
-    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-    reader = textDecoder.readable.getReader();
-
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (value) parseData(value.trim());
-    }
-}
-
-function parseData(line) {
-    // Expect micro:bit CSV: TEMP,HEATER,FAN,SAMPLE
-    // Example: 88.5,ON,ON,Safe
-    const parts = line.split(",");
-    if (parts.length < 4) return;
-
-    tempEl.textContent = parseFloat(parts[0]).toFixed(1);
-    heaterEl.textContent = parts[1];
-    fanEl.textContent = parts[2];
-    sampleEl.textContent = parts[3];
-}
