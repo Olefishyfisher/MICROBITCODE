@@ -8,7 +8,6 @@ let port, writer, reader;
 
 document.getElementById("connect").addEventListener("click", async () => {
     try {
-        // Request a USB serial port
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 115200 });
 
@@ -20,28 +19,26 @@ document.getElementById("connect").addEventListener("click", async () => {
         textEncoder.readable.pipeTo(port.writable);
         writer = textEncoder.writable.getWriter();
 
-        // Show admin panel after connection
         document.getElementById("admin").style.display = "block";
 
-        // Read serial data continuously
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
             if (!value) continue;
 
+            // Split by commas and trim spaces
             const parts = value.trim().split(",");
             if (parts.length >= 4) {
                 const temp = parseFloat(parts[0]);
-                const heater = parts[1];
-                const fan = parts[2];
-                const status = parts[3];
+                const heater = parts[1].trim() === "1" ? "ON" : "OFF";
+                const fan = parts[2].trim() === "1" ? "ON" : "OFF";
+                const status = parts[3].trim();
 
                 tempSpan.textContent = temp.toFixed(1);
                 heaterSpan.textContent = heater;
                 fanSpan.textContent = fan;
                 statusSpan.textContent = status;
 
-                // Accessibility & alerts
                 if (status.includes("At Risk")) {
                     statusSpan.className = "alert";
                     alertTone.play().catch(() => {});
@@ -58,7 +55,6 @@ document.getElementById("connect").addEventListener("click", async () => {
     }
 });
 
-// Admin commands to override heater/fan
 async function sendCmd(cmd, val) {
     if (!writer) return;
     await writer.write(`${cmd},${val},\n`);
