@@ -2,17 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PetriBox Monitor (Wired)</title>
+<title>PetriBox Monitor</title>
 <style>
+body { font-family: sans-serif; line-height:1.5; }
 #admin { display:none; margin-top:20px; }
+.alert { color:red; font-weight:bold; }
+.safe { color:green; }
+#temp,#heater,#fan,#status { font-size:1.5em; font-weight:bold; }
+button { font-size:1.2em; margin:0.3em; }
 </style>
 </head>
 <body>
-<h1>PetriBox Monitor (Wired)</h1>
-<div>Temperature: <span id="temp">--</span> °F</div>
-<div>Heater: <span id="heater">--</span></div>
-<div>Fan: <span id="fan">--</span></div>
-<div>Sample Status: <span id="status">--</span></div>
+<h1>PetriBox Monitor</h1>
+
+<div>Temperature: <span id="temp" aria-live="polite">--</span> °F</div>
+<div>Heater: <span id="heater" aria-live="polite">--</span></div>
+<div>Fan: <span id="fan" aria-live="polite">--</span></div>
+<div>Sample Status: <span id="status" aria-live="polite">--</span></div>
+
 <button id="connect">Connect to micro:bit</button>
 
 <div id="admin">
@@ -22,6 +29,9 @@
 <button onclick="sendCmd('FAN',1)">Fan ON</button>
 <button onclick="sendCmd('FAN',0)">Fan OFF</button>
 </div>
+
+<!-- Optional alert sound -->
+<audio id="alertTone" src="alert.mp3" preload="auto"></audio>
 
 <script src="app.js"></script>
 </body>
