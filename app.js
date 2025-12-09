@@ -1,28 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>PetriBox Monitor</title>
-<style>
-#admin { display:none; margin-top:20px; }
-</style>
-</head>
-<body>
-<h1>PetriBox Monitor</h1>
-<div>Temperature: <span id="temp">--</span> °F</div>
-<div>Heater: <span id="heater">--</span></div>
-<div>Fan: <span id="fan">--</span></div>
-<div>Sample Status: <span id="status">--</span></div>
-<button id="connect">Connect to micro:bit</button>
+let tempSpan = document.getElementById("temp");
+let heaterSpan = document.getElementById("heater");
+let fanSpan = document.getElementById("fan");
+let statusSpan = document.getElementById("status");
+let uartChar;
 
-<div id="admin">
-<h2>Admin Controls</h2>
-<button onclick="sendCmd('HEATER',1)">Heater ON</button>
-<button onclick="sendCmd('HEATER',0)">Heater OFF</button>
-<button onclick="sendCmd('FAN',1)">Fan ON</button>
-<button onclick="sendCmd('FAN',0)">Fan OFF</button>
-</div>
+document.getElementById("connect").addEventListener("click", async () => {
+    try {
+        const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [0xFFE0]
+        });
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(0xFFE0);
+        uartChar = await service.getCharacteristic(0xFFE1);
+        await uartChar.startNotifications();
+        uartChar.addEventListener("characteristicvaluechanged", e => {
+            const value = new TextDecoder().decode(e.target.value);
+            const parts = value.trim().split(",");
+            if (parts.length >= 4) {
+                tempSpan.textContent = parts[0];
+                heaterSpan.textContent = parts[1];
+                fanSpan.textContent = parts[2];
+                statusSpan.textContent = parts[3];
+            }
+        });
+        // show admin panel
+        document.getElementById("admin").style.display = "block";
+    } catch(err) {
+        console.error(err);
+    }
+});
 
-<script src="app.js"></script>
-</body>
-</html>
+function sendCmd(cmd, val) {
+    if (!uartChar) return;
+    const line = `${cmd},${val},`;
+    uartChar.writeValue(new TextEncoder().encode(line));
+}
