@@ -1,18 +1,17 @@
-let tempSpan = document.getElementById("temp");
-let heaterSpan = document.getElementById("heater");
-let fanSpan = document.getElementById("fan");
-let statusSpan = document.getElementById("status");
+const tempSpan = document.getElementById("temp");
+const heaterSpan = document.getElementById("heater");
+const fanSpan = document.getElementById("fan");
+const statusSpan = document.getElementById("status");
+const alertTone = document.getElementById("alertTone");
 
-let port;
-let writer, reader;
+let port, writer, reader;
 
 document.getElementById("connect").addEventListener("click", async () => {
     try {
-        // Request a serial port
+        // Request a USB serial port
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 115200 });
 
-        // Set up streams
         const textDecoder = new TextDecoderStream();
         port.readable.pipeTo(textDecoder.writable);
         reader = textDecoder.readable.getReader();
@@ -21,20 +20,36 @@ document.getElementById("connect").addEventListener("click", async () => {
         textEncoder.readable.pipeTo(port.writable);
         writer = textEncoder.writable.getWriter();
 
-        // Show hidden admin panel
+        // Show admin panel after connection
         document.getElementById("admin").style.display = "block";
 
-        // Read loop
+        // Read serial data continuously
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
             if (!value) continue;
+
             const parts = value.trim().split(",");
             if (parts.length >= 4) {
-                tempSpan.textContent = parts[0];
-                heaterSpan.textContent = parts[1];
-                fanSpan.textContent = parts[2];
-                statusSpan.textContent = parts[3];
+                const temp = parseFloat(parts[0]);
+                const heater = parts[1];
+                const fan = parts[2];
+                const status = parts[3];
+
+                tempSpan.textContent = temp.toFixed(1);
+                heaterSpan.textContent = heater;
+                fanSpan.textContent = fan;
+                statusSpan.textContent = status;
+
+                // Accessibility & alerts
+                if (status.includes("At Risk")) {
+                    statusSpan.className = "alert";
+                    alertTone.play().catch(() => {});
+                } else if (status.includes("Destroyed")) {
+                    statusSpan.className = "alert";
+                } else {
+                    statusSpan.className = "safe";
+                }
             }
         }
 
@@ -43,6 +58,7 @@ document.getElementById("connect").addEventListener("click", async () => {
     }
 });
 
+// Admin commands to override heater/fan
 async function sendCmd(cmd, val) {
     if (!writer) return;
     await writer.write(`${cmd},${val},\n`);
