@@ -3,13 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <title>PetriBox Monitor</title>
+<style>
+#admin { display:none; margin-top:20px; }
+</style>
 </head>
 <body>
 <h1>PetriBox Monitor</h1>
 <div>Temperature: <span id="temp">--</span> °F</div>
 <div>Heater: <span id="heater">--</span></div>
 <div>Fan: <span id="fan">--</span></div>
+<div>Sample Status: <span id="status">--</span></div>
 <button id="connect">Connect to micro:bit</button>
+
+<div id="admin">
+<h2>Admin Controls</h2>
+<button onclick="sendCmd('HEATER',1)">Heater ON</button>
+<button onclick="sendCmd('HEATER',0)">Heater OFF</button>
+<button onclick="sendCmd('FAN',1)">Fan ON</button>
+<button onclick="sendCmd('FAN',0)">Fan OFF</button>
+</div>
 
 <script src="app.js"></script>
 </body>
