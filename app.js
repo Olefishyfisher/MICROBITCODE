@@ -2,20 +2,30 @@ let tempSpan = document.getElementById("temp");
 let heaterSpan = document.getElementById("heater");
 let fanSpan = document.getElementById("fan");
 let statusSpan = document.getElementById("status");
-let uartChar;
+let port;
+let writer, reader;
 
 document.getElementById("connect").addEventListener("click", async () => {
     try {
-        const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [0xFFE0]
-        });
-        const server = await device.gatt.connect();
-        const service = await server.getPrimaryService(0xFFE0);
-        uartChar = await service.getCharacteristic(0xFFE1);
-        await uartChar.startNotifications();
-        uartChar.addEventListener("characteristicvaluechanged", e => {
-            const value = new TextDecoder().decode(e.target.value);
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 115200 });
+
+        const textDecoder = new TextDecoderStream();
+        const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+        reader = textDecoder.readable.getReader();
+
+        const textEncoder = new TextEncoderStream();
+        const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+        writer = textEncoder.writable.getWriter();
+
+        // Show admin controls
+        document.getElementById("admin").style.display = "block";
+
+        // Read loop
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (!value) continue;
             const parts = value.trim().split(",");
             if (parts.length >= 4) {
                 tempSpan.textContent = parts[0];
@@ -23,16 +33,14 @@ document.getElementById("connect").addEventListener("click", async () => {
                 fanSpan.textContent = parts[2];
                 statusSpan.textContent = parts[3];
             }
-        });
-        // show admin panel
-        document.getElementById("admin").style.display = "block";
+        }
+
     } catch(err) {
         console.error(err);
     }
 });
 
-function sendCmd(cmd, val) {
-    if (!uartChar) return;
-    const line = `${cmd},${val},`;
-    uartChar.writeValue(new TextEncoder().encode(line));
+async function sendCmd(cmd, val) {
+    if (!writer) return;
+    await writer.write(`${cmd},${val},\n`);
 }
